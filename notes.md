@@ -455,7 +455,7 @@ let u = ", world!".to_string();
 println!("{}", s + &u); //&u coerces to &str
 ```
 
-Because of UTF-8 encoding (i.e. each character can take up to 4 bytes), indexing a String is tricky. It produces byte indexing.
+Because of UTF-8 encoding (i.e. each character can take up to 4 bytes), indexing a String is tricky. Indexing produces byte indexing.
 
 ```rust
 // prints h e l l o 
@@ -510,6 +510,7 @@ struct Point<T> {
 let p1 = Point{x: 0, y: 0} // Point<i32>
 let p2 = Point{x: 0.0, y: 0.0} // Point<f32>
 ```
+struct fields are private by default, even if struct is marked pub. 
 
 ## Generic Functions
 Similar to structs.
@@ -530,4 +531,45 @@ let y = if val > 0.0 {
         val
     };
     println!("{:?}", y);
+```
+
+## Ownership
+
+Every value is owned by a variables. And there can only be one owner. 
+For example, in the below code, value owned by x is moved to y i.e. y takes the ownership. 
+
+When the owner goes out of scope its value will be dropped. This means when a function takes ownership of a value, it must return it for it to be used subsequently.
+
+```rust
+let x = String::from("hello world");
+let y = x; //y owns x's value i.e. x's value moved to y.
+println!("{}", x); // compile error; x is invalid after the move
+```
+
+However, x's value can be "borrowed". This is called referencing. There are two types of references: mutable and immutable. 
+
+Immutable reference is read only borrow. Since ownership integrity is not affected and all other immutable borrows refer to the same value, one can have any number of immutable references. 
+
+Only one mutable reference is allowed, since it is almost like a move. 
+
+```rust
+let x = String::from("hello world");
+let y = &x; //y borrows x's value immutably.
+println!("{}", y);
+println!("{}", x); // valid
+let z = &x; // another immutable borrow
+for c in z.chars() {
+    println!("{}", c);
+}
+println!("{}", x); // valid
+```
+
+However, below results in compile error.
+
+```rust
+let mut x = String::from("hello world");
+let y = &mut x; //mutable borrow of x, almost like a move
+let z = &x; //immutable borrow of the same x; compile error as y can change x
+println!("{}", y.to_uppercase());
+println!("{}", z); 
 ```
