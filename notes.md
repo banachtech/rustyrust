@@ -518,3 +518,16 @@ fn add<T>(x: T, y: T) -> T {
     x + y
 }
 ```
+
+## If Expression
+If is an expression.
+```rust
+let y = if val > 0.0 {
+        println!("greater than 0");
+        val
+    } else {
+        println!("less than 0");
+        val
+    };
+    println!("{:?}", y);
+```
