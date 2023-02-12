@@ -573,3 +573,17 @@ let z = &x; //immutable borrow of the same x; compile error as y can change x
 println!("{}", y.to_uppercase());
 println!("{}", z); 
 ```
+
+## Stack Variables
+
+Variables that live entirely in the stack memory are copied and not moved.
+
+```rust
+let x = [0; 5];
+let n = 5;
+let s = String::from("hello");
+foo(x);
+println!("{:?}, {}", x, n); // works, since x and n were copied and not moved to foo.
+bar(s);
+println!("{}", s); // compile error, s was moved to bar.
+```
