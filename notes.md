@@ -587,3 +587,27 @@ println!("{:?}, {}", x, n); // works, since x and n were copied and not moved to
 bar(s);
 println!("{}", s); // compile error, s was moved to bar.
 ```
+
+## Printing Type of a variable
+
+We can use the std::any::typename function.
+
+```rust
+fn print_type_of<T>(_: &T) {
+    println!("{}", std::any::type_name::<T>())
+}
+```
+
+## println! & format! & push_str
+Both borrow implicitly even if values are passed without explicit referencing. Values are not moved.
+
+```rust
+let s = "abc".to_string();
+println!("{}", s); //s is implicitly borrowed
+let s2 = format!("{}{}", s, "def"); // s is implicitly borrowed
+println!("{}", s); // works
+let mut s3 = s; //s is moved and cannot be used after this
+let s4 = "ghi";
+s3.push_str(s4); // s4 is implicitly borrowed
+s3.push_str(s4); // valid
+```
