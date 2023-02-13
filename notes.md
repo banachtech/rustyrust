@@ -409,6 +409,28 @@ vec.len();
 vec.is_empty();
 ```
 
+Iteration:
+- iterating over reference to vec gives reference to each element
+- iterating over a moved vec gives value of each element
+
+```rust
+let vecs = vec![1, 2, 3, 4, 5];
+
+// iterating over reference
+let mut s = 0;
+for v in &vecs {
+    print_type_of(&v); // &i32
+    s += *v; // v needs to be dereferenced
+}
+println!("{}", s); // 15
+// iterating over a moved vec
+s = 0;
+for v in vecs {
+    print_type_of(&v); // i32
+    s += v;
+}
+println!("{}", s); // 15
+```
 
 ## Strings
 
@@ -640,7 +662,7 @@ fn main() {
 
 ## Retrieving Values from Hash Map
 
-The get function takes a ket value returns an Option enum. If the key does not exist, we get None.
+The get function takes a key and returns an Option enum wrapping a reference to the value. If the key does not exist, we get None.
 
 ```rust
 let mut h: HashMap<_, _> = HashMap::new();
@@ -692,5 +714,62 @@ let mut map = HashMap::new();
 for w in text.split_whitespace() {
     let mut count = map.entry(w).or_insert(0);
     *count += 1;
+}
+```
+
+## Example: Mean, Mode, Median
+
+```rust
+use std::collections::HashMap;
+
+fn main() {
+    let vecs: Vec<Vec<i32>> = vec![[1, 2, 3, 4, 1].to_vec(), [1, 2, 2, 2, 1].to_vec(), [1].to_vec()];
+
+    for v in &vecs {
+        println!(
+            "{:?}: mean {}, median {}, mode {}",
+            v,
+            mean(&v),
+            median(&v),
+            mode(&v)
+        );
+    }
+}
+
+fn mean(x: &Vec<i32>) -> f32 {
+    let mut s: f32 = 0.0;
+    for v in x {
+        s += *v as f32;
+    }
+    s / x.len() as f32
+}
+
+fn median(x: &Vec<i32>) -> f32 {
+    let mut y = x.clone();
+    y.sort();
+    if y.len() % 2 == 0 {
+        let i = (y.len() / 2) as usize;
+        (y[i - 1] + y[i]) as f32 * 0.5
+    } else {
+        let i = (y.len() / 2) as usize;
+        y[i] as f32
+    }
+}
+
+fn mode(x: &Vec<i32>) -> i32 {
+    let mut h = HashMap::new();
+    for v in x {
+        let count = h.entry(v).or_insert(0);
+        *count += 1;
+    }
+    let mut maxcount = 0;
+    let mut modenum = x[0];
+    for (key, val) in h {
+        if val > maxcount {
+            maxcount = val;
+            modenum = *key;
+        }
+    }
+    modenum
 }
 ```
