@@ -407,8 +407,8 @@ Attributes:
 ```rust
 vec.len();
 vec.is_empty();
+```
 
-Access, edit, modify:
 
 ## Strings
 
@@ -610,4 +610,87 @@ let mut s3 = s; //s is moved and cannot be used after this
 let s4 = "ghi";
 s3.push_str(s4); // s4 is implicitly borrowed
 s3.push_str(s4); // valid
+```
+
+## Collections consume
+
+Using a owned value to construct a vector, struct or hash map moves the value.
+
+```rust
+struct Foo {
+    x: String,
+    y: usize,
+}
+
+fn main() {
+    let mut s = String::from("abc");
+    let v = vec![s]; // s is moved to v
+    s.push_str("def"); // error
+
+    let mut s = String::from("abc");
+    let mut h: HashMap<_, _> = HashMap::new();
+    h.insert(s, 0); // s is moved to h
+    s.push_str("def"); // error
+
+    let mut s = String::from("abc");
+    let foo = Foo { x: s, y: 0 }; // s is moved to foo
+    s.push_str("def"); // error
+}
+```
+
+## Retrieving Values from Hash Map
+
+The get function takes a ket value returns an Option enum. If the key does not exist, we get None.
+
+```rust
+let mut h: HashMap<_, _> = HashMap::new();
+h.insert("djokovic", 1);
+h.insert("federer", 2);
+h.insert("nadal", 3);
+println!("{:?}", h);
+
+// get returns a mutable reference
+let name = "nadal";
+if let Some(rank) = h.get(&name) {
+    println!("{} is seeded {}", name, rank);
+} else {
+    println!("{} is unseeded", name);
+}
+```
+
+One can also iterate a hash map like a vector.
+
+```rust
+for (key, val) in &h {
+    println!("{}: {}", key, val);
+}
+```
+The order of output is unknown.
+
+## Updating Hash Map
+
+If a key alreadey existings, inserting overwrites existing value.
+
+```rust
+h.insert("nadal", 4); // nadal's prev value of 3 is overwritten
+```
+
+The entry method provides more flexibility. It returns an Entry enum which has a or_insert() that returns a mutable reference to existing value (if it exists) or sets the value to 0 and returns a mutable reference to it.
+
+```rust
+// first insert
+// inserts (wawrinka, 8) in h and returns mutable ref to 8
+let mut v = h.entry("wawrinka").or_insert(8); 
+
+// "wawrinka" exists, so returns mutable ref to 3
+let mut v = h.entry("wawrinka").or_insert(3);
+
+// updating based on existing value
+// example: counting occurences
+let text = "quick brown fox jumped over the fence";
+let mut map = HashMap::new();
+for w in text.split_whitespace() {
+    let mut count = map.entry(w).or_insert(0);
+    *count += 1;
+}
 ```
