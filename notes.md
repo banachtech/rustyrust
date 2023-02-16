@@ -416,20 +416,20 @@ Iteration:
 ```rust
 let vecs = vec![1, 2, 3, 4, 5];
 
-
+// iterating over reference
 let mut s = 0;
 for v in &vecs {
-    print_type_of(&v); // &i32
-    s += *v; // v needs to be dereferenced
+    s += *v; // v has type &i32 and needs to be dereferenced
 }
-println!("{}", s); // 15
+println!("{:?}", vecs);
 
+// iterating over a moved vec
 s = 0;
 for v in vecs {
-    print_type_of(&v); // i32
-    s += v;
+    s += v; // v has type i32
 }
-println!("{}", s); // 15
+println!("{}", s);
+println!("{:?}", vecs); // error vecs was moved, no invalid
 ```
 
 ## Strings
@@ -811,5 +811,22 @@ fn read_file(f: &str) -> Result<(),Box<dyn Error>> {
     ...
     ...
     Ok(())
+}
+```
+
+## Closures
+
+Fibonacchi example:
+
+```rust
+fn fib() -> Box<dyn FnMut() -> i64> {
+    let mut x0: i64 = 0;
+    let mut x1: i64 = 1;
+    Box::new(move || {
+        let z = x0 + x1;
+        x0 = x1;
+        x1 = z;
+        z
+    })
 }
 ```
