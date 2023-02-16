@@ -416,14 +416,14 @@ Iteration:
 ```rust
 let vecs = vec![1, 2, 3, 4, 5];
 
-// iterating over reference
+
 let mut s = 0;
 for v in &vecs {
     print_type_of(&v); // &i32
     s += *v; // v needs to be dereferenced
 }
 println!("{}", s); // 15
-// iterating over a moved vec
+
 s = 0;
 for v in vecs {
     print_type_of(&v); // i32
@@ -541,6 +541,7 @@ fn add<T>(x: T, y: T) -> T {
     x + y
 }
 ```
+The angle bracket specification is needed because the compiler needs to know T in parameter list is not a concrete type.
 
 ## If Expression
 If is an expression.
@@ -771,5 +772,44 @@ fn mode(x: &Vec<i32>) -> i32 {
         }
     }
     modenum
+}
+```
+
+## String Manipulation Example
+
+```rust
+const VOWELS: [char; 5] = ['a','e','i','o','u'];
+
+fn to_pig_latin(s: &str) -> String {
+    let c: Vec<char> = s.chars().collect();
+    let tmp: String;
+    let mut suffix = "-".to_string();
+    
+    if VOWELS.iter().any(|x| {x == &c[0]}) {
+        tmp = c.iter().collect();
+        suffix.push_str("hay");
+    } else {
+        tmp = c[1..].iter().collect();
+        suffix.push(c[0]);
+        suffix.push_str("ay");
+    }
+    tmp + &suffix
+}
+```
+
+## The ? operator
+
+The ? operator works the same way match expression on Result enum.
+If the value of Result is Ok, then the value wrapped by Ok will be returned from the expression and program continues. If it is Err, then Err will be returned from the whole function as if we had used return keyword.
+
+In otherwords, ? help save a lot of boiler plat code.
+
+```rust
+fn read_file(f: &str) -> Result<(),Box<dyn Error>> {
+    let contents = fs::read_to_string(f)?;
+    println!("{}", contents);
+    ...
+    ...
+    Ok(())
 }
 ```
