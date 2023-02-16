@@ -830,3 +830,35 @@ fn fib() -> Box<dyn FnMut() -> i64> {
     })
 }
 ```
+## Iterators
+
+iter borrows immutably, iter_mut borrows mutably and into_iter takes ownership.
+
+```rust
+let v = vec![1, 2, 3, 4, 5];
+
+//mut is required for next() as next consumes
+let mut v1 = v.iter(); // v is borrowed
+println!("{:?}", v1); 
+
+v1.next();
+println!("{:?}", v1); // v1 is being consumed
+
+println!("{:?}", v); // v is still valid
+
+let mut v2 = v.into_iter(); // v is moved
+println!("{:?}", v2); 
+
+v2.next();
+println!("{:?}", v2); // v2 is being consumed
+
+println!("{:?}", v); // error v was moved
+
+let mut v = vec![1, 2, 3, 4, 5];
+let v3 = v.iter_mut(); // v is borrowed mutably
+println!("{:?}", v3); 
+
+v3.for_each(|x| *x += 7); //x is &mut to each element of v
+// v.iter_mut().for_each(|x| *x += 7);
+println!("{:?}", v); // v is still valid as it was borrowed, but changed
+```
