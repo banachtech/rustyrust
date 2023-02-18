@@ -862,3 +862,50 @@ v3.for_each(|x| *x += 7); //x is &mut to each element of v
 // v.iter_mut().for_each(|x| *x += 7);
 println!("{:?}", v); // v is still valid as it was borrowed, but changed
 ```
+
+## Custom Box<> and Deref Implementation
+
+```rust
+use std::ops::Deref;
+
+#[derive(Debug)]
+struct MyBox<T>(T); // tuple struct with one elem of type T
+
+impl<T> MyBox<T> {
+    fn new(x: T) -> MyBox<T> {
+        MyBox(x)
+    }
+}
+
+impl<T> Deref for MyBox<T> {
+    type Target = T;
+
+    fn deref(&self) -> &T {
+        &self.0
+    }
+}
+
+fn main() {
+    let x = 3;
+    let y = MyBox::new(x);
+    println!("{:?}", y); // MyBox(3)
+    println!("{}", *y); // 3
+    println!("{}", y.deref()); // 3
+    type_of(&y); // MyBox<i32>
+    type_of(y.deref()); // i32
+    
+    let name = MyBox::new("balaji");
+    greet(&name); // hello balaji!
+    
+    let name = MyBox::new(String::from("balaji"));
+    greet(&name); // hello balaji!
+}
+
+fn greet(s: &str) {
+    println!("hello {}!", s);
+}
+
+fn type_of<T>(_: &T) {
+    println!("{}", std::any::type_name::<T>())
+}
+```
