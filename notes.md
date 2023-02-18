@@ -909,3 +909,34 @@ fn type_of<T>(_: &T) {
     println!("{}", std::any::type_name::<T>())
 }
 ```
+
+## Custom Drop for Smart Pointers
+
+Drop trait lets us customizewhat happens when a value goes out of scope. Drop trait requires implementation of a drop method that takes a mutable reference to self.
+
+```rust
+#[derive(Debug)]
+struct MySmartPointer {
+    data: String,
+}
+// Drop is included in the prelude
+impl Drop for MySmartPointer {
+    fn drop(&mut self) {
+        println!("{} is dropped", self.data);
+    }
+}
+
+fn main() {
+    let x = MySmartPointer{ data: String::from("balaji") };
+    {
+        let y = MySmartPointer{ data: String::from("lauriane") };
+        type_of(&y);
+    }
+    type_of(&x);
+}
+
+fn type_of<T>(_: &T) {
+    println!("{}", std::any::type_name::<T>())
+}
+```
+
