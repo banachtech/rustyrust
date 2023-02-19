@@ -977,3 +977,62 @@ fn main() {
     println!("leaf strong = {}, weak = {}", Rc::strong_count(&leaf), Rc::weak_count(&leaf));
 }
 ```
+
+## Random Number Generation
+
+Rng trait has standard methods. thread_rng() gives a thread-local generator implementing Rng.
+
+```rust
+use rand::{Rng, thread_rng};
+use rand_distr::StandardNormal; // 0.4.3
+use rand::prelude::{IteratorRandom, SliceRandom}; // trait for iterators and vectors
+
+let mut rng = thread_rng(); // generator
+    
+// fill pre alloctaed array with uniform variates
+let mut x = [0.0f32; 10];
+rng.fill(&mut x);
+
+// fill pre-allocated array with u8
+let mut x = [0u8; 10];
+rng.fill(&mut x);
+
+// generate an int within a range
+let r: i32 = rng.gen_range(-10..=10);
+
+// generate a rand based on receiver type
+let r: i32 = rng.gen(); // int 32
+let r: f32 = rng.gen(); // uniform in (0,1)
+
+    // shuffle array
+let mut a = [1,2,3,4,5];
+a.shuffle(&mut rng);
+
+// shuffle a vector 
+let mut v: Vec<u8> = (0..10).collect();
+v.shuffle(&mut rng); // Vec<> implements SliceRandom trait
+
+// byte slice
+let mut bytes = "Hello, random!".to_string().into_bytes();
+bytes.shuffle(&mut rng);
+let str = String::from_utf8(bytes).unwrap();
+
+// char slice, valid utf-8
+let mut c: Vec<char> = String::from("hello world").chars().collect(); // into utf-8 chars
+c.shuffle(&mut rng);
+let s: String = c.iter().collect(); // back to string
+
+// iterators
+let faces = "😀😎😐😕😠😢";
+if let Some(c) = faces.chars().choose(&mut rng) {
+    // returns a single element wrapped as Option
+    println!("I am {}!", c);
+};
+let c = faces.chars().choose(&mut rng).unwrap();
+let c = faces.chars().choose_multiple(&mut rng, 3); // vector
+
+// generate from a distribution
+use rand_distr::StandardNormal;
+let z: f32 = rng.sample(StandardNormal);
+
+```
