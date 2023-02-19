@@ -1036,3 +1036,96 @@ use rand_distr::StandardNormal;
 let z: f32 = rng.sample(StandardNormal);
 
 ```
+
+## Multi-variate Normal Generation
+
+```rust
+use std::f32;
+use rand::rngs::ThreadRng;
+
+struct MVNormal {
+    chol: Vec<Vec<f32>>,
+}
+
+impl MVNormal {
+    fn new(a: Vec<Vec<f32>>) -> MVNormal {
+        let mut g = a.clone();
+        for j in 0..a.len() {
+            let mut v = a[j].clone();
+            if j > 0 {
+                for k in 0..j {
+                    for l in 0..v.len() {
+                        let n: usize = g[k].len()-v.len();
+                        let tmp = &g[k][n..];
+                        v[l] = v[l] - tmp[0] * tmp[l];
+                    }
+                }
+            }
+            for l in 0..v.len() {
+                g[j][l] = v[l]/f32::sqrt(v[0]);
+            }
+        }
+        MVNormal{ chol: g }
+    }
+    
+    fn gen(&self, rng: &mut ThreadRng) -> Vec<f32> {
+        let mut z: Vec<f32> = Vec::new();
+        for _i in 0..self.chol.len() {
+            z.push(rng.sample(StandardNormal));
+        }
+        let mut w = z.clone();
+        for i in 0..2 {
+            w[i] = 0.0;
+            for j in 0..i + 1 {
+                w[i] += self.chol[i][j] * z[j]
+            }
+        }
+        w
+    }
+}
+```
+
+## Concurrency
+
+### Threads
+
+Rust model is 1:1 i.e. one programming thread per operating system thread.
+
+We pass a closure containing code to be executed in a thread to thread::spawn function. The function returns a handle on which its join method can be called to ensure its completion by blocking the current thread.
+
+```rust
+use std::thread;
+use std::time::Duration;
+
+fn main() {
+    let s = String::from("hello");
+    let h = thread::spawn(move||{ 
+    // move annotation makes the closure take ownership of s
+        print!("{}", s);
+        thread::sleep(Duration::from_millis(1))
+    });
+    h.join().unwrap(); // ensures h returns here
+    println!(" world");
+    // prints "hello world"
+}
+```
+
+### Channels
+
+```rust
+use std::thread;
+use std::sync::mpsc; // multi producer, single customer
+use std::time::Duration;
+
+fn main() {
+    let (tx, rx) = mpsc::channel(); // create a channel
+    thread::spawn(move ||{ // move neede to take ownership of tx
+        let s = String::from("love");
+        tx.send(s).unwrap(); // returns a Result<,>
+        thread::sleep(Duration::from_millis(1))
+    });
+    
+    let received = rx.recv().unwrap(); // returns Result<,>
+    println!("received {}", received);
+}
+```
