@@ -1129,3 +1129,77 @@ fn main() {
     println!("received {}", received);
 }
 ```
+
+## Crossbeam Channels
+Crossbeam is recommended over std::sync::mpsc.
+
+Two types of channels - unbounded and bounded. Bounded is similar to buffered channels of golang. Unbounded channels have infinite channel capacity.
+
+```rust
+use crossbeam::channel::{self, Receiver, Sender};
+use std::{thread, time::Duration};
+```
+
+Create channels for example:
+
+```rust
+ let (task_tx, task_rx) = channel::unbounded();
+ ```
+
+ Clone ends of a channel as required. For example, if we want two workers to receive on a channel, clone the receiver ends.
+
+ ```rust
+ let task_rx2 = task_rx.clone();
+ ```
+
+An example.
+First define a worker function that receives tasks and sends output.
+
+```rust
+fn worker(name: &str, task: Receiver<u8>, result: Sender<u8>) {
+    for t in task {
+        println!("Worker {} received task {}", name, t);
+        thread::sleep(Duration::from_secs_f32(0.5f32));
+        println!("Worker {} completed task {}", name, t);
+        if result.send(t).is_err() {
+            break;
+        }
+    }
+}
+```
+
+We use two workers. So two task receiver channels and two result sender channels.
+
+```rust
+let (task_tx, task_rx) = channel::unbounded();
+let task_rx2 = task_rx.clone();
+let (res_tx, res_rx) = channel::unbounded();
+let res_tx2 = res_tx.clone();
+```
+
+Create workers i.e. two threads and pass the executing code as closure.
+
+```rust
+// create workers
+let bob = thread::spawn(|| worker("bob", task_rx2, res_tx));
+let rob = thread::spawn(|| worker("rob", task_rx, res_tx2));
+```
+
+Send tasks over the task channel and close the channel after. Closing the channel does not affect the items already in the channel.
+The receiver side for loop will exit if the channel is closed.
+
+```rust
+for t in 0..5 {
+    task_tx.send(t).unwrap();
+}
+drop(task_tx);
+```
+
+Collect result and terminate threads.
+```rust
+for r in res_rx {
+    println!("received {}", r);
+}
+bob.join().unwrap();
+rob.join().unwrap();
+```
