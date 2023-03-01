@@ -1023,13 +1023,13 @@ c.shuffle(&mut rng);
 let s: String = c.iter().collect(); // back to string
 
 // iterators
-let faces = "😀😎😐😕😠😢";
-if let Some(c) = faces.chars().choose(&mut rng) {
+let cs = "abcdef";
+if let Some(c) = cs.chars().choose(&mut rng) {
     // returns a single element wrapped as Option
     println!("I am {}!", c);
 };
-let c = faces.chars().choose(&mut rng).unwrap();
-let c = faces.chars().choose_multiple(&mut rng, 3); // vector
+let c = cs.chars().choose(&mut rng).unwrap();
+let c = cs.chars().choose_multiple(&mut rng, 3); // vector
 
 // generate from a distribution
 use rand_distr::StandardNormal;
@@ -1127,5 +1127,31 @@ fn main() {
     
     let received = rx.recv().unwrap(); // returns Result<,>
     println!("received {}", received);
+}
+```
+
+## Patterns in Rust
+
+Two types of patterns: refutable and irrefutable. Irrefutable patterns will match any possible values.
+
+Function parameters, let statements and for loops can only accept irrefutable patterns. If let, while let and match expressions can accept both types.
+
+Matching named variables: varaibles within a pattern shadow and these shadow variable are the ones available in the execution arm.
+
+```rust
+let x = Some(5);
+let y = 10;
+match x {
+    Some(y) => println!("{}", y), //prints 5, y matches 5
+    ...
+}
+```
+
+However, y can be used in extra conditional (match guard).
+
+```rust
+match x {
+    Some(n) if n<y =>  {println!("{} is less than {}", n, y);},
+    _ => println!("{:?}", x),
 }
 ```
