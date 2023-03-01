@@ -1281,3 +1281,71 @@ pub enum MyError {
     Err2,
 }
 ```
+
+## Error Handling
+
+Recoverable or unrecoverable.
+
+Libraries should never panic. Applications may panic.
+
+Result enum is standard for handing errors. The ```match``` and ```unwrap``` methods internally call panic! macro.
+
+```unwrap_or``` is a convenient wrapper for conditional assignments based on Result return type.
+
+```rust
+let score = match foo() {
+    Ok(x) => x,
+    Err(_) => 0,
+};
+```
+can be written compactly as 
+```rust
+let score = foo().unwrap_or(0);
+```
+
+Rewrapping errors.
+
+```rust
+fn foo() -> Result<String, io::Error> {
+    let file = match File::open("bar.txt") {
+        Ok(f) => f,
+        Err(e) => return e,
+    };
+    ...
+}
+```
+
+This pattern can be replaced with ```?`` operator. 
+
+```rust
+fn foo() -> Result<String, io::Error> {
+    let file = File::open("bar.txt")?;
+    ...
+}
+```
+
+The ```?``` returns the file handle if every thing goes ok. Otherwise it terminates the function and returns an Err enum wrapping ```io::Error```. This allows chaining of multiple methods that return Result enum.
+
+## Error Handling - crate anyhow
+
+Convenient methods for chaining methods that return different Result types.
+
+```anyhow``` provides a Result type that wraps the standard Result type.
+
+```rust
+use anyhow::{Context, Result}
+use std::fs::File;
+
+pub struct MyStruct {
+    ...
+}
+fn get(filename: &str) -> Result<MyStruct> {
+    let f = File::open(filename).context("could not open file")?;
+    let d = MyStruct::foo(f).context("could not read data into MyStruct")?;
+    Ok(d)
+}
+fn main() -> Result<()> {
+    let x = get("bar.txt").context("could not get data")?;
+    ...
+    Ok(())
+}
