@@ -863,6 +863,23 @@ v3.for_each(|x| *x += 7); //x is &mut to each element of v
 println!("{:?}", v); // v is still valid as it was borrowed, but changed
 ```
 
+Iterators are lazy. Need to be consumed to force evaluation.
+
+```rust
+let mut numbers = vec![1, 2, 3, 4];
+    for x in numbers.iter_mut() {
+        *x *= 3;
+    }
+    println!("{:?}", numbers); 
+```
+Same code implemented with iterator. ```for_each``` is preferred for side effects as it is also a consumer.
+```rust
+    numbers
+        .iter_mut() // produces mutable reference to each element
+        .for_each(|x| *x *=3);
+    println!("{:?}", numbers);
+```
+
 ## Custom Box<> and Deref Implementation
 
 ```rust
@@ -1023,7 +1040,7 @@ c.shuffle(&mut rng);
 let s: String = c.iter().collect(); // back to string
 
 // iterators
-let faces = "😀😎😐😕😠😢";
+let faces = "abcd";
 if let Some(c) = faces.chars().choose(&mut rng) {
     // returns a single element wrapped as Option
     println!("I am {}!", c);
@@ -1158,9 +1175,9 @@ First define a worker function that receives tasks and sends output.
 ```rust
 fn worker(name: &str, task: Receiver<u8>, result: Sender<u8>) {
     for t in task {
-        println!("Worker {} received task {}", name, t);
+        println!("Worker {name} received task {t}");
         thread::sleep(Duration::from_secs_f32(0.5f32));
-        println!("Worker {} completed task {}", name, t);
+        println!("Worker {name} completed task {t}");
         if result.send(t).is_err() {
             break;
         }
@@ -1198,8 +1215,69 @@ drop(task_tx);
 Collect result and terminate threads.
 ```rust
 for r in res_rx {
-    println!("received {}", r);
+    println!("received {r}");
 }
 bob.join().unwrap();
 rob.join().unwrap();
+```
+
+## Errors - custom implementation
+
+Use Enums for defining errors. Group errors into enums, as small a collection as possible.
+
+Do not pass through errors from third party dependencies. Changes in that library may break the package.
+
+Error should be non-exhaustive.
+
+```rust
+#[non_exhaustive]
+pub enum MyError {
+    Err1,
+    Err2,
+
+}
+```
+
+```non-exhaustive``` does not allow matching without wild card. This allows adding new variants in the future.
+
+Error trait is sub trait of Debug and Display, so these need to be implemented before.
+
+Debug trait can simply be derived with ```#[derive(Debug)]```.
+
+To implement Display trait, all that is needed is to implement ```fmt``` function that takes the error and creates a string.
+
+```rust
+use std::fmt::{Display, Formatter};
+impl Display for MyError {
+    fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
+        use MyError::*;
+        match self {
+            Err1 => write!(fmt, "error 1"),
+            Err2 => write!(fmt, "error 2"),
+        }
+    }
+}
+```
+
+And then the Error trait itself:
+
+```rust
+use std::error::Error;
+impl Error for MyError {}
+```
+
+## Errors - thiserror crate
+The implementation of Display and Error traits can be wrapped into a single step with thiserror third party library.
+
+```rust
+use thiserror::Error;
+
+#[derive(Debug, Error)]
+#[non_exhaustive]
+pub enum MyError {
+    #[error("error 1")]
+    Err1,
+    #[error("error 2")]
+    Err2,
+}
 ```
