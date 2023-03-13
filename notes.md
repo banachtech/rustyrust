@@ -863,6 +863,23 @@ v3.for_each(|x| *x += 7); //x is &mut to each element of v
 println!("{:?}", v); // v is still valid as it was borrowed, but changed
 ```
 
+Iterators are lazy. Need to be consumed to force evaluation.
+
+```rust
+let mut numbers = vec![1, 2, 3, 4];
+    for x in numbers.iter_mut() {
+        *x *= 3;
+    }
+    println!("{:?}", numbers); 
+```
+Same code implemented with iterator. ```for_each``` is preferred for side effects as it is also a consumer.
+```rust
+    numbers
+        .iter_mut() // produces mutable reference to each element
+        .for_each(|x| *x *=3);
+    println!("{:?}", numbers);
+```
+
 ## Custom Box<> and Deref Implementation
 
 ```rust
@@ -1023,13 +1040,13 @@ c.shuffle(&mut rng);
 let s: String = c.iter().collect(); // back to string
 
 // iterators
-let cs = "abcdef";
-if let Some(c) = cs.chars().choose(&mut rng) {
+let faces = "abcd";
+if let Some(c) = faces.chars().choose(&mut rng) {
     // returns a single element wrapped as Option
     println!("I am {}!", c);
 };
-let c = cs.chars().choose(&mut rng).unwrap();
-let c = cs.chars().choose_multiple(&mut rng, 3); // vector
+let c = faces.chars().choose(&mut rng).unwrap();
+let c = faces.chars().choose_multiple(&mut rng, 3); // vector
 
 // generate from a distribution
 use rand_distr::StandardNormal;
@@ -1130,28 +1147,205 @@ fn main() {
 }
 ```
 
-## Patterns in Rust
+## Crossbeam Channels
+Crossbeam is recommended over std::sync::mpsc.
 
-Two types of patterns: refutable and irrefutable. Irrefutable patterns will match any possible values.
-
-Function parameters, let statements and for loops can only accept irrefutable patterns. If let, while let and match expressions can accept both types.
-
-Matching named variables: varaibles within a pattern shadow and these shadow variable are the ones available in the execution arm.
+Two types of channels - unbounded and bounded. Bounded is similar to buffered channels of golang. Unbounded channels have infinite channel capacity.
 
 ```rust
-let x = Some(5);
-let y = 10;
-match x {
-    Some(y) => println!("{}", y), //prints 5, y matches 5
+use crossbeam::channel::{self, Receiver, Sender};
+use std::{thread, time::Duration};
+```
+
+Create channels for example:
+
+```rust
+ let (task_tx, task_rx) = channel::unbounded();
+ ```
+
+ Clone ends of a channel as required. For example, if we want two workers to receive on a channel, clone the receiver ends.
+
+ ```rust
+ let task_rx2 = task_rx.clone();
+ ```
+
+An example.
+First define a worker function that receives tasks and sends output.
+
+```rust
+fn worker(name: &str, task: Receiver<u8>, result: Sender<u8>) {
+    for t in task {
+        println!("Worker {name} received task {t}");
+        thread::sleep(Duration::from_secs_f32(0.5f32));
+        println!("Worker {name} completed task {t}");
+        if result.send(t).is_err() {
+            break;
+        }
+    }
+}
+```
+
+We use two workers. So two task receiver channels and two result sender channels.
+
+```rust
+let (task_tx, task_rx) = channel::unbounded();
+let task_rx2 = task_rx.clone();
+let (res_tx, res_rx) = channel::unbounded();
+let res_tx2 = res_tx.clone();
+```
+
+Create workers i.e. two threads and pass the executing code as closure.
+
+```rust
+// create workers
+let bob = thread::spawn(|| worker("bob", task_rx2, res_tx));
+let rob = thread::spawn(|| worker("rob", task_rx, res_tx2));
+```
+
+Send tasks over the task channel and close the channel after. Closing the channel does not affect the items already in the channel.
+The receiver side for loop will exit if the channel is closed.
+
+```rust
+for t in 0..5 {
+    task_tx.send(t).unwrap();
+}
+drop(task_tx);
+```
+
+Collect result and terminate threads.
+```rust
+for r in res_rx {
+    println!("received {r}");
+}
+bob.join().unwrap();
+rob.join().unwrap();
+```
+
+## Errors - custom implementation
+
+Use Enums for defining errors. Group errors into enums, as small a collection as possible.
+
+Do not pass through errors from third party dependencies. Changes in that library may break the package.
+
+Error should be non-exhaustive.
+
+```rust
+#[non_exhaustive]
+pub enum MyError {
+    Err1,
+    Err2,
+
+}
+```
+
+```non-exhaustive``` does not allow matching without wild card. This allows adding new variants in the future.
+
+Error trait is sub trait of Debug and Display, so these need to be implemented before.
+
+Debug trait can simply be derived with ```#[derive(Debug)]```.
+
+To implement Display trait, all that is needed is to implement ```fmt``` function that takes the error and creates a string.
+
+```rust
+use std::fmt::{Display, Formatter};
+impl Display for MyError {
+    fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
+        use MyError::*;
+        match self {
+            Err1 => write!(fmt, "error 1"),
+            Err2 => write!(fmt, "error 2"),
+        }
+    }
+}
+```
+
+And then the Error trait itself:
+
+```rust
+use std::error::Error;
+impl Error for MyError {}
+```
+
+## Errors - thiserror crate
+The implementation of Display and Error traits can be wrapped into a single step with thiserror third party library.
+
+```rust
+use thiserror::Error;
+
+#[derive(Debug, Error)]
+#[non_exhaustive]
+pub enum MyError {
+    #[error("error 1")]
+    Err1,
+    #[error("error 2")]
+    Err2,
+}
+```
+
+## Error Handling
+
+Recoverable or unrecoverable.
+
+Libraries should never panic. Applications may panic.
+
+Result enum is standard for handing errors. The ```match``` and ```unwrap``` methods internally call panic! macro.
+
+```unwrap_or``` is a convenient wrapper for conditional assignments based on Result return type.
+
+```rust
+let score = match foo() {
+    Ok(x) => x,
+    Err(_) => 0,
+};
+```
+can be written compactly as 
+```rust
+let score = foo().unwrap_or(0);
+```
+
+Rewrapping errors.
+
+```rust
+fn foo() -> Result<String, io::Error> {
+    let file = match File::open("bar.txt") {
+        Ok(f) => f,
+        Err(e) => return e,
+    };
     ...
 }
 ```
 
-However, y can be used in extra conditional (match guard).
+This pattern can be replaced with ```?`` operator. 
 
 ```rust
-match x {
-    Some(n) if n<y =>  {println!("{} is less than {}", n, y);},
-    _ => println!("{:?}", x),
+fn foo() -> Result<String, io::Error> {
+    let file = File::open("bar.txt")?;
+    ...
 }
 ```
+
+The ```?``` returns the file handle if every thing goes ok. Otherwise it terminates the function and returns an Err enum wrapping ```io::Error```. This allows chaining of multiple methods that return Result enum.
+
+## Error Handling - crate anyhow
+
+Convenient methods for chaining methods that return different Result types.
+
+```anyhow``` provides a Result type that wraps the standard Result type.
+
+```rust
+use anyhow::{Context, Result}
+use std::fs::File;
+
+pub struct MyStruct {
+    ...
+}
+fn get(filename: &str) -> Result<MyStruct> {
+    let f = File::open(filename).context("could not open file")?;
+    let d = MyStruct::foo(f).context("could not read data into MyStruct")?;
+    Ok(d)
+}
+fn main() -> Result<()> {
+    let x = get("bar.txt").context("could not get data")?;
+    ...
+    Ok(())
+}
