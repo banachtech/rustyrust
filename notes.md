@@ -1349,3 +1349,36 @@ fn main() -> Result<()> {
     ...
     Ok(())
 }
+```
+## Paths
+
+The standard library ```path``` provides convenience structures and methods to manage OS independent file paths.
+Two main structs: ```Path``` and ```PathBuf```
+
+1. ```PathBuf```
+Owned, mutable path with ability to modify in-place.
+
+```rust
+use std::path::PathBuf;
+
+// build a path
+let mut path = PathBuf::new();
+path.push("/home");
+path.push("projects");
+path.push("test");
+path.set_extension(".csv") //"/home/projects/test.csv"
+
+// direct from string
+let path = PathBuf::from("/home/projects/test.csv")
+```
+
+2. ```Path```
+A slice of path like &str. Since this is an unsized type, must always be used behind & or Box.
+
+```rust
+let path = Path::new("./foo/bar.txt");
+
+let path = Path::new("./foo").join("bar.txt");
+
+let p2 = Path::new(".").join("bar").join("foo").with_extension("txt");
+```
